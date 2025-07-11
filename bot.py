@@ -7,12 +7,11 @@ intents = discord.Intents.default()
 intents.members = True
 intents.guilds = True
 intents.message_content = True
-intents.presences = False
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 HITTERS_FILE = "hitters.json"
-SECRET_ROLE_NAME = "Member"  # Make sure this matches your secret role EXACTLY
+SECRET_ROLE_NAME = "Member"  # EXACT secret role name here
 
 # Load hitters list from JSON file
 def load_hitters():
@@ -44,8 +43,11 @@ def remove_hitter(user_id):
 def get_secret_role(guild):
     roles = [r for r in guild.roles if r.name == SECRET_ROLE_NAME]
     if len(roles) >= 2:
-        return sorted(roles, key=lambda r: r.position)[-1]  # The lower one is the secret
-    return None
+        return sorted(roles, key=lambda r: r.position)[-1]
+    elif len(roles) == 1:
+        return roles[0]
+    else:
+        return None
 
 @bot.event
 async def on_ready():
@@ -66,6 +68,10 @@ async def on_member_update(before, after):
     elif had_role and not has_role:
         remove_hitter(after.id)
         print(f"Removed hitter: {after.name}")
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send(f"Pong! Latency: {round(bot.latency * 1000)}ms")
 
 @bot.command()
 async def ishitter(ctx, member: discord.Member):
@@ -114,7 +120,34 @@ async def removehitter(ctx, member: discord.Member):
     await member.remove_roles(secret_role)
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
-import os
-bot.run(os.getenv("DISCORD_TOKEN"))
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sync_hitters(ctx, channel: discord.TextChannel):
+    secret_role = get_secret_role(ctx.guild)
+    if not secret_role:
+        await ctx.send("Secret role not found.")
+        return
 
+    synced = 0
+    failed = 0
 
+    for member in ctx.guild.members:
+        perms = channel.permissions_for(member)
+        if perms.read_messages:
+            try:
+                if secret_role not in member.roles:
+                    await member.add_roles(secret_role)
+                add_hitter(member.id)
+                synced += 1
+            except Exception as e:
+                print(f"Failed to add role for {member}: {e}")
+                failed += 1
+
+    await ctx.send(f"✅ Sync complete! Added secret role to {synced} members. Failed on {failed} members.")
+
+# Use environment variable for the bot token (set in Railway under Secrets)
+TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    print("Error: DISCORD_TOKEN environment variable not set.")
+else:
+    bot.run(TOKEN)
