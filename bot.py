@@ -114,4 +114,4 @@ async def removehitter(ctx, member: discord.Member):
     await member.remove_roles(secret_role)
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
-bot.run("YOUR_BOT_TOKEN")
+bot.run("DISCORD_TOKEN")
