@@ -186,7 +186,21 @@ async def list_hitters_cmd(ctx):
         else:
             names.append(f"Unknown User ({user_id})")
 
-    await ctx.send("Hitters: " + ", ".join(names))
+    # Discord max message length is 2000 chars, so split if too long
+    chunks = []
+    chunk = ""
+    for name in names:
+        addition = (", " if chunk else "") + name
+        if len(chunk) + len(addition) > 1900:
+            chunks.append(chunk)
+            chunk = name
+        else:
+            chunk += addition
+    if chunk:
+        chunks.append(chunk)
+
+    for chunk in chunks:
+        await ctx.send(f"Hitters: {chunk}")
 
 @bot.command(name='is_hitter')
 async def is_hitter_cmd(ctx, member: discord.Member):
