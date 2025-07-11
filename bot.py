@@ -14,7 +14,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 SECRET_ROLE_NAME = "Member"  # The secret lower member role name
 WELCOME_CHANNEL_ID = 1392933458107437056  # Put your welcome channel ID here
 WELCOME_MESSAGE = "Welcome hitter, your story of rags to riches starts here. Check #how-to-mm for tips on how to hit, and remember all of these channels are disguised as staff channels. Good luck."  # Customize your welcome message here
-EMBED_IMAGE_URL = "<blockquote class="imgur-embed-pub" lang="en" data-id="a/dw3wOmC" data-context="false" ><a href="//imgur.com/a/dw3wOmC"></a></blockquote><script async src="//s.imgur.com/min/embed.js" charset="utf-8"></script>"  # Put your embed image URL here
+EMBED_IMAGE_URL = EMBED_IMAGE_URL = '<blockquote class="imgur-embed-pub" lang="en" data-id="a/dw3wOmC" data-context="false" ><a href="//imgur.com/a/dw3wOmC"></a></blockquote><script async src="//s.imgur.com/min/embed.js" charset="utf-8"></script>'
+  # Put your embed image URL here
 
 def get_secret_role(guild):
     roles = [r for r in guild.roles if r.name == SECRET_ROLE_NAME]
