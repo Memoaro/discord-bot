@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import os
+from io import StringIO
 
 intents = discord.Intents.default()
 intents.members = True
@@ -11,7 +12,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 HITTERS_FILE = "hitters.json"
-SECRET_ROLE_NAME = "Member"  # EXACT secret role name here
+SECRET_ROLE_NAME = "Member"  # Change this to your secret role name EXACTLY
 
 # Load hitters list from JSON file
 def load_hitters():
@@ -25,29 +26,23 @@ def save_hitters(hitters):
     with open(HITTERS_FILE, "w") as f:
         json.dump(hitters, f, indent=2)
 
-# Add a user to the hitter list
 def add_hitter(user_id):
     hitters = load_hitters()
     if user_id not in hitters:
         hitters.append(user_id)
         save_hitters(hitters)
 
-# Remove a user from the hitter list
 def remove_hitter(user_id):
     hitters = load_hitters()
     if user_id in hitters:
         hitters.remove(user_id)
         save_hitters(hitters)
 
-# Get the secret role object from the guild
 def get_secret_role(guild):
     roles = [r for r in guild.roles if r.name == SECRET_ROLE_NAME]
-    if len(roles) >= 2:
-        return sorted(roles, key=lambda r: r.position)[-1]
-    elif len(roles) == 1:
+    if len(roles) >= 1:
         return roles[0]
-    else:
-        return None
+    return None
 
 @bot.event
 async def on_ready():
@@ -70,10 +65,6 @@ async def on_member_update(before, after):
         print(f"Removed hitter: {after.name}")
 
 @bot.command()
-async def ping(ctx):
-    await ctx.send(f"Pong! Latency: {round(bot.latency * 1000)}ms")
-
-@bot.command()
 async def ishitter(ctx, member: discord.Member):
     hitters = load_hitters()
     if member.id in hitters:
@@ -92,13 +83,20 @@ async def listhitters(ctx):
     for uid in hitters:
         member = ctx.guild.get_member(uid)
         if member:
-            display.append(member.mention)
+            display.append(f"{member} (ID: {uid})")
+        else:
+            display.append(f"Unknown User ID: {uid}")
 
     msg = ", ".join(display)
-    if len(msg) > 4000:
-        await ctx.send("Too many hitters to display.")
-    else:
+    
+    if len(msg) <= 1900:
         await ctx.send("**Hitters:** " + msg)
+    else:
+        # Send as a text file attachment
+        file_content = "\n".join(display)
+        file = StringIO(file_content)
+        file.name = "hitters_list.txt"
+        await ctx.send("Too many hitters to display in chat. Here's the full list:", file=discord.File(fp=file, filename=file.name))
 
 @bot.command()
 async def addhitter(ctx, member: discord.Member):
@@ -108,6 +106,7 @@ async def addhitter(ctx, member: discord.Member):
         return
 
     await member.add_roles(secret_role)
+    add_hitter(member.id)
     await ctx.send(f"✅ {member.mention} has been added as a hitter.")
 
 @bot.command()
@@ -118,36 +117,7 @@ async def removehitter(ctx, member: discord.Member):
         return
 
     await member.remove_roles(secret_role)
+    remove_hitter(member.id)
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def sync_hitters(ctx, channel: discord.TextChannel):
-    secret_role = get_secret_role(ctx.guild)
-    if not secret_role:
-        await ctx.send("Secret role not found.")
-        return
-
-    synced = 0
-    failed = 0
-
-    for member in ctx.guild.members:
-        perms = channel.permissions_for(member)
-        if perms.read_messages:
-            try:
-                if secret_role not in member.roles:
-                    await member.add_roles(secret_role)
-                add_hitter(member.id)
-                synced += 1
-            except Exception as e:
-                print(f"Failed to add role for {member}: {e}")
-                failed += 1
-
-    await ctx.send(f"✅ Sync complete! Added secret role to {synced} members. Failed on {failed} members.")
-
-# Use environment variable for the bot token (set in Railway under Secrets)
-TOKEN = os.getenv("DISCORD_TOKEN")
-if not TOKEN:
-    print("Error: DISCORD_TOKEN environment variable not set.")
-else:
-    bot.run(TOKEN)
+bot.run(os.getenv("DISCORD_TOKEN"))
