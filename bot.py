@@ -11,17 +11,19 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-SECRET_ROLE_NAME = "Member"  # Your secret hitter role name (exact match)
-WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with your welcome channel ID (int)
-WELCOME_MESSAGE = "Welcome hitter, your story of rags to riches starts here. Check #how-to-mm for tips on how to hit, and remember all of these channels are disguised as staff channels. Good luck."  # Your welcome message for new hitters
-EMBED_IMAGE_URL = "https://ibb.co/p6VQGwGW"  # Your embed image URL
+# === CONFIGURATION ===
+SECRET_ROLE_NAME = "Member"  # Secret "hitter" role (lower one)
+WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with your real welcome channel ID
+WELCOME_MESSAGE = "Welcome hitter, your story of rags to riches starts here. Check #how-to-mm for tips on how to hit, and remember all of these channels are disguised as staff channels. Good luck."  # Custom welcome message
+EMBED_IMAGE_URL = "https://ibb.co/p6VQGwGW"  # Replace with your direct image URL
 
-
+# === BOT EVENTS ===
 @bot.event
 async def on_ready():
     print(f"✅ Bot is online as {bot.user}")
 
 
+# === BASIC COMMANDS ===
 @bot.command()
 async def ping(ctx):
     await ctx.send("Pong!")
@@ -64,18 +66,27 @@ async def removehitter(ctx, member: discord.Member):
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
 
+# === CHOOSE YOUR FATE BUTTON VIEW ===
 class ChooseYourFateView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
     @discord.ui.button(label="I want to be poor", style=discord.ButtonStyle.danger)
     async def poor_button(self, button: Button, interaction: Interaction):
+        guild = interaction.guild
+        member = interaction.user
+        secret_role = discord.utils.get(guild.roles, name=SECRET_ROLE_NAME)
+
+        if secret_role in member.roles:
+            await interaction.response.send_message("You're already a hitter. I can't ban you. 😉", ephemeral=True)
+            return
+
         try:
-            await interaction.user.ban(reason="Chose to be poor via chooseyourfate")
+            await interaction.user.ban(reason="Chose to be poor via !chooseyourfate")
             await interaction.message.delete()
-        except Exception as e:
+        except Exception:
             await interaction.response.send_message(
-                "I couldn't ban you. Please check my permissions.", ephemeral=True)
+                "❌ I couldn't ban you. Please check my permissions.", ephemeral=True)
 
     @discord.ui.button(label="I want to be rich", style=discord.ButtonStyle.success)
     async def rich_button(self, button: Button, interaction: Interaction):
@@ -83,45 +94,41 @@ class ChooseYourFateView(View):
         member = interaction.user
         secret_role = discord.utils.get(guild.roles, name=SECRET_ROLE_NAME)
 
-        if secret_role in member.roles:
-            await interaction.response.send_message(
-                "You are already a hitter!", ephemeral=True)
-            # Keep embed visible, no delete
+        if not secret_role:
+            await interaction.response.send_message("❌ Secret role not found.", ephemeral=True)
             return
+
+        if secret_role in member.roles:
+            await interaction.response.send_message("You're already a hitter. 🤑", ephemeral=True)
+            return  # DO NOT remove embed
 
         try:
             await member.add_roles(secret_role)
         except Exception:
             await interaction.response.send_message(
-                "I couldn't add the role. Please check my permissions.", ephemeral=True)
+                "❌ I couldn't add the role. Check my permissions.", ephemeral=True)
             return
 
-        # Send welcome message in welcome channel
-        channel = guild.get_channel(WELCOME_CHANNEL_ID)
-        if channel:
-            await channel.send(f"{member.mention} {WELCOME_MESSAGE}")
+        welcome_channel = guild.get_channel(WELCOME_CHANNEL_ID)
+        if welcome_channel:
+            await welcome_channel.send(f"{member.mention} {WELCOME_MESSAGE}")
 
-        await interaction.message.delete()
+        await interaction.message.delete()  # Remove embed for successful new hitters
 
 
+# === FATE COMMAND ===
 @bot.command()
 async def chooseyourfate(ctx):
-    # Check if author already has the secret role
-    secret_role = discord.utils.get(ctx.guild.roles, name=SECRET_ROLE_NAME)
-    if secret_role in ctx.author.roles:
-        await ctx.send("You already have the secret member role, this command is not for you.")
-        return
-
-    embed = Embed(title="Choose Your Fate", color=discord.Color.blue())
+    embed = Embed(title="Choose Your Fate", color=discord.Color.purple())
     embed.set_image(url=EMBED_IMAGE_URL)
 
     view = ChooseYourFateView()
     await ctx.send(embed=embed, view=view)
 
 
-# Run the bot with token from Railway env variable
+# === RUN BOT USING RAILWAY VARIABLE ===
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    print("ERROR: DISCORD_TOKEN environment variable not set.")
+    print("❌ ERROR: DISCORD_TOKEN environment variable not set.")
 else:
     bot.run(TOKEN)
