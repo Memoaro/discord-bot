@@ -1,122 +1,113 @@
-import os
 import discord
 from discord.ext import commands
-from discord.ui import View, button, Button
+from discord.ui import View, Button
+import os
 
 intents = discord.Intents.default()
-intents.guilds = True
 intents.members = True
+intents.guilds = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-SECRET_ROLE_NAME = "Member"  # Your secret hitter role (lower one)
-PUBLIC_ROLE_NAME = "Member"  # The public-facing member role
-WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with actual channel ID
-EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/1392914867241091204/1393428926906368134/OIP.png?ex=68732350&is=6871d1d0&hm=88a24fe53aaff79dfcdf03c6c4b57ce091d3a5f0a652e2c5d4abb39847e88b50&"  # Replace with a real image link
-
-
-def get_role_by_name(guild, name):
-    matches = [role for role in guild.roles if role.name == name]
-    return sorted(matches, key=lambda r: r.position)[-1] if matches else None
-
+WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with your real welcome channel ID
+EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/1392914867241091204/1393428926906368134/OIP.png?ex=68732350&is=6871d1d0&hm=88a24fe53aaff79dfcdf03c6c4b57ce091d3a5f0a652e2c5d4abb39847e88b50&"  # Replace with a valid image URL
 
 class ChooseYourFateView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @button(label="I want to be poor", style=discord.ButtonStyle.danger, custom_id="poor")
-    async def poor_button(self, interaction: discord.Interaction, button: Button):
-        guild = interaction.guild
+    @discord.ui.button(label="I want to be poor", style=discord.ButtonStyle.danger)
+    async def poor_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         member = interaction.user
-        secret_role = get_role_by_name(guild, SECRET_ROLE_NAME)
+        guild = interaction.guild
 
-        if secret_role in member.roles:
-            await interaction.response.send_message("You’re already a hitter. You may stay. 😈", ephemeral=True)
+        member_roles = [r for r in guild.roles if r.name == "Member"]
+        if len(member_roles) < 2:
+            await interaction.response.send_message("❌ Error: Member roles misconfigured.", ephemeral=True)
             return
 
-        await interaction.response.send_message("You chose poorly. 💀", ephemeral=True)
+        # Sort roles: highest position first
+        real_member_role, hitter_role = sorted(member_roles, key=lambda r: r.position, reverse=True)
+
+        if hitter_role in member.roles:
+            await interaction.response.send_message("⚠️ You are a hitter and cannot be banned.", ephemeral=True)
+            return
+
+        await interaction.message.delete()
+        await interaction.response.send_message(f"👋 {member.mention} has chosen to be poor and is now banned.", ephemeral=False)
         await member.ban(reason="Chose to be poor")
 
-    @button(label="I want to be rich", style=discord.ButtonStyle.success, custom_id="rich")
-    async def rich_button(self, interaction: discord.Interaction, button: Button):
-        guild = interaction.guild
+    @discord.ui.button(label="I want to be rich", style=discord.ButtonStyle.success)
+    async def rich_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         member = interaction.user
-        secret_role = get_role_by_name(guild, SECRET_ROLE_NAME)
-        public_role = get_role_by_name(guild, PUBLIC_ROLE_NAME)
+        guild = interaction.guild
 
-        if secret_role in member.roles:
-            await interaction.response.send_message("You're already a hitter. 🕵️", ephemeral=True)
+        member_roles = [r for r in guild.roles if r.name == "Member"]
+        if len(member_roles) < 2:
+            await interaction.response.send_message("❌ Error: Could not find both member roles.", ephemeral=True)
             return
 
-        if public_role in member.roles:
-            await member.remove_roles(public_role)
+        real_member_role, hitter_role = sorted(member_roles, key=lambda r: r.position, reverse=True)
 
-        if secret_role:
-            await member.add_roles(secret_role)
+        if hitter_role in member.roles:
+            await interaction.response.send_message("⚠️ You are already a hitter.", ephemeral=True)
+            return
 
-        embed = discord.Embed(
-            title="Welcome to the dark side. 🌌",
-            description=f"{member.mention} has chosen to be rich.",
-            color=discord.Color.green()
-        )
-        embed.set_image(url=EMBED_IMAGE_URL)
+        if real_member_role not in member.roles:
+            await interaction.response.send_message("❌ You must be a member to choose.", ephemeral=True)
+            return
+
+        await member.remove_roles(real_member_role)
+        await member.add_roles(hitter_role)
+
+        await interaction.message.delete()
+        await interaction.response.send_message(f"✅ Welcome {member.mention}! You chose wisely.", ephemeral=False)
 
         welcome_channel = guild.get_channel(WELCOME_CHANNEL_ID)
         if welcome_channel:
-            await welcome_channel.send(embed=embed)
-
-        await interaction.message.delete()
-        await interaction.response.send_message("Welcome to the elite. 💼", ephemeral=True)
-
+            await welcome_channel.send(f"🎉 Welcome {member.mention}, our newest hitter!")
 
 @bot.command()
-async def chooseyourfate(ctx):
-    embed = discord.Embed(
-        title="Choose your fate wisely...",
-        description="You must decide your path.",
-        color=discord.Color.purple()
-    )
-    embed.set_image(url=EMBED_IMAGE_URL)
-
-    view = ChooseYourFateView()
-    await ctx.send(embed=embed, view=view)
-
+async def ping(ctx):
+    await ctx.send("🏓 Pong!")
 
 @bot.command()
 async def ishitter(ctx, member: discord.Member):
-    role = get_role_by_name(ctx.guild, SECRET_ROLE_NAME)
-    if role in member.roles:
+    roles = [r for r in ctx.guild.roles if r.name == "Member"]
+    if len(roles) < 2:
+        await ctx.send("❌ Roles are not set correctly.")
+        return
+    real_member_role, hitter_role = sorted(roles, key=lambda r: r.position, reverse=True)
+    if hitter_role in member.roles:
         await ctx.send(f"✅ {member.mention} is a hitter.")
     else:
         await ctx.send(f"❌ {member.mention} is NOT a hitter.")
 
-
 @bot.command()
 async def addhitter(ctx, member: discord.Member):
-    role = get_role_by_name(ctx.guild, SECRET_ROLE_NAME)
-    if not role:
-        await ctx.send("Secret role not found.")
+    roles = [r for r in ctx.guild.roles if r.name == "Member"]
+    if len(roles) < 2:
+        await ctx.send("❌ Roles are not set correctly.")
         return
-
-    await member.add_roles(role)
+    real_member_role, hitter_role = sorted(roles, key=lambda r: r.position, reverse=True)
+    await member.add_roles(hitter_role)
     await ctx.send(f"✅ {member.mention} has been added as a hitter.")
-
 
 @bot.command()
 async def removehitter(ctx, member: discord.Member):
-    role = get_role_by_name(ctx.guild, SECRET_ROLE_NAME)
-    if not role:
-        await ctx.send("Secret role not found.")
+    roles = [r for r in ctx.guild.roles if r.name == "Member"]
+    if len(roles) < 2:
+        await ctx.send("❌ Roles are not set correctly.")
         return
-
-    await member.remove_roles(role)
+    real_member_role, hitter_role = sorted(roles, key=lambda r: r.position, reverse=True)
+    await member.remove_roles(hitter_role)
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
-
 @bot.command()
-async def ping(ctx):
-    await ctx.send(f"🏓 Pong! Latency: {round(bot.latency * 1000)}ms")
-
+async def chooseyourfate(ctx):
+    embed = discord.Embed(title="Choose Your Fate", description="Make your choice wisely.", color=0x3498db)
+    embed.set_image(url=EMBED_IMAGE_URL)
+    await ctx.send(embed=embed, view=ChooseYourFateView())
 
 bot.run(os.getenv("DISCORD_TOKEN"))
