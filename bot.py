@@ -38,7 +38,7 @@ class ChooseYourFateView(View):
         await interaction.response.send_message(f"👋 {member.mention} has chosen to be poor and is now banned.", ephemeral=False)
         await member.ban(reason="Chose to be poor")
 
-    @discord.ui.button(label="I want to be rich", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="I want to be rich", style=discord.ButtonStyle.primary)
     async def rich_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         member = interaction.user
         guild = interaction.guild
