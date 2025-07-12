@@ -11,7 +11,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with your real welcome channel ID
-EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/1392914867241091204/1393428926906368134/OIP.png?ex=68732350&is=6871d1d0&hm=88a24fe53aaff79dfcdf03c6c4b57ce091d3a5f0a652e2c5d4abb39847e88b50&"  # Replace with a valid image URL
+EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/1392914867241091204/1393443309329973352/Choose_Wisely_2.png?ex=687330b5&is=6871df35&hm=49c0d9aa8f757145c671ebcd5a78a75e042a6ca6c49e51dad6615de4ba45496c&"  # Replace with a valid image URL
 
 class ChooseYourFateView(View):
     def __init__(self):
