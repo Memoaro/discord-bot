@@ -1,7 +1,7 @@
 import os
 import discord
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View, button, Button
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -12,8 +12,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 SECRET_ROLE_NAME = "Member"  # Your secret hitter role (lower one)
 PUBLIC_ROLE_NAME = "Member"  # The public-facing member role
-WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with the actual channel ID
-EMBED_IMAGE_URL = "https://tse2.mm.bing.net/th/id/OIP.f_b0yTM9UM7IaQIC8UCT7wHaGa?rs=1&pid=ImgDetMain&o=7&rm=3"  # Replace with your image URL
+WELCOME_CHANNEL_ID = 1392933458107437056  # Replace with actual channel ID
+EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/1392914867241091204/1393428926906368134/OIP.png?ex=68732350&is=6871d1d0&hm=88a24fe53aaff79dfcdf03c6c4b57ce091d3a5f0a652e2c5d4abb39847e88b50&"  # Replace with a real image link
 
 
 def get_role_by_name(guild, name):
@@ -25,10 +25,7 @@ class ChooseYourFateView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        self.add_item(Button(label="I want to be poor", style=discord.ButtonStyle.danger, custom_id="poor"))
-        self.add_item(Button(label="I want to be rich", style=discord.ButtonStyle.success, custom_id="rich"))
-
-    @discord.ui.button(label="I want to be poor", style=discord.ButtonStyle.danger, custom_id="poor", row=0)
+    @button(label="I want to be poor", style=discord.ButtonStyle.danger, custom_id="poor")
     async def poor_button(self, interaction: discord.Interaction, button: Button):
         guild = interaction.guild
         member = interaction.user
@@ -41,7 +38,7 @@ class ChooseYourFateView(View):
         await interaction.response.send_message("You chose poorly. 💀", ephemeral=True)
         await member.ban(reason="Chose to be poor")
 
-    @discord.ui.button(label="I want to be rich", style=discord.ButtonStyle.success, custom_id="rich", row=0)
+    @button(label="I want to be rich", style=discord.ButtonStyle.success, custom_id="rich")
     async def rich_button(self, interaction: discord.Interaction, button: Button):
         guild = interaction.guild
         member = interaction.user
