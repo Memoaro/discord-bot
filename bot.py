@@ -27,7 +27,6 @@ class ChooseYourFateView(View):
             await interaction.response.send_message("❌ Error: Member roles misconfigured.", ephemeral=True)
             return
 
-        # Sort roles: highest position first
         real_member_role, hitter_role = sorted(member_roles, key=lambda r: r.position, reverse=True)
 
         if hitter_role in member.roles:
@@ -91,6 +90,7 @@ async def addhitter(ctx, member: discord.Member):
         await ctx.send("❌ Roles are not set correctly.")
         return
     real_member_role, hitter_role = sorted(roles, key=lambda r: r.position, reverse=True)
+    await member.remove_roles(real_member_role)
     await member.add_roles(hitter_role)
     await ctx.send(f"✅ {member.mention} has been added as a hitter.")
 
@@ -102,6 +102,7 @@ async def removehitter(ctx, member: discord.Member):
         return
     real_member_role, hitter_role = sorted(roles, key=lambda r: r.position, reverse=True)
     await member.remove_roles(hitter_role)
+    await member.add_roles(real_member_role)
     await ctx.send(f"✅ {member.mention} has been removed as a hitter.")
 
 @bot.command()
